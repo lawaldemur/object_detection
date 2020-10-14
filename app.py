@@ -1,31 +1,13 @@
-# gunicorn --threads 5 --workers 1 --bind 0.0.0.0:5000 wsgi:app
-import request
 import os, time, sched, json, requests
 from importlib import import_module
 from flask import Flask, render_template, Response, request
 from threading import Thread
-from pyngrok import ngrok
 from camera import Camera
 from db_connection import *
-from detect_video import *
-
-
-# class LoopThread(Thread):
-#     def __init__(self):
-#         Thread.__init__(self)
-
-#     def run(self):
-#         while True:
-#             print('start detection (in loop)')
-#             detection()
+# from detect_video import *
 
 
 app = Flask(__name__)
-# t_detection = LoopThread()
-# t_detection.start()
-
-# url = ngrok.connect(5000)
-# print(' * Tunnel URL:', url)
 
 
 @app.route('/')
@@ -53,31 +35,34 @@ def stream(id):
 def recieve_api_request():
     # receive data in json format
     req_data = request.get_json()
+    print(req_data)
 
     # insert data to db
     query = """
         INSERT INTO
-          requests_log (access, start_time, endtime, place, zone, videostream, objective, active)
+          requests_log (access, start_time, endtime,
+          place, controlplace, zone, activezone,
+          videostream, objective, bodyguard, active)
         VALUES
-          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', {});
+          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {});
     """.format(req_data['access'], req_data['start_time'], req_data['endtime'],
-        req_data['place'], req_data['zone'], req_data['videostream'],
-        req_data['objective'], req_data['active'])
+        req_data['place'], req_data['controlplace'], req_data['zone'], req_data['activezone'],
+        req_data['videostream'], req_data['objective'], req_data['bodyguard'], req_data['active'])
 
     # execute the query (function returns id of the new row)
     id = db_execute_query(query)
 
     # schedule detection if active == 1
-    if req_data['active'] == 1:
-        s = sched.scheduler(time.time, time.sleep)
-        s.enter(req_data['start_time'] - int(time.time()), 0, detection, kwargs={'id': id, 'endtime': req_data['endtime']})
-        t = Thread(target=s.run)
-        t.start()
-    elif req_data['active'] == 1 and req_data['start_time'] == 0:
-        t = Thread(target=detection, args=[id, 0])
-        t.start()
+    # if req_data['active'] == 1:
+    #     s = sched.scheduler(time.time, time.sleep)
+    #     s.enter(req_data['start_time'] - int(time.time()), 0, detection, kwargs={'id': id, 'endtime': req_data['endtime']})
+    #     t = Thread(target=s.run)
+    #     t.start()
+    # elif req_data['active'] == 1 and req_data['start_time'] == 0:
+    #     t = Thread(target=detection, args=[id, 0])
+    #     t.start()
 
-    return 'success'
+    return 'success\n'
 
 
 def send_notifier(obj):
@@ -88,4 +73,5 @@ def send_notifier(obj):
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.80.23', port=30, threaded=True)
+	# local: for mac os 0.0.0.0:5000, for windows 127.0.0.1:30
+    app.run(host='0.0.0.0', port=5000, threaded=True)

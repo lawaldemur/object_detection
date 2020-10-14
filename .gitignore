@@ -2,3 +2,4 @@
 checkpoints/*
 detections/*
 data/video/*
+.idea/

@@ -26,16 +26,19 @@ tiny = False
 model = 'yolov4'
 video = os.getcwd() + '/data/video/ShortHelmets.mp4'
 # output = os.getcwd() + '/detections/result.avi'
-output = None
+output = os.getcwd() + '/detections/result.avi'
 output_format = 'XVID'
 iou = 0.45
-score = 0.25
+score_human = 0.25
+score_obj = 0.95
 count = False
 dont_show = True
 info = False
-skip = 50
-show_fps = False
+skip = 0
+show_fps = True
 frame_id = 0
+zone_highlighter = False
+
 
 print('start loading models...')
 # main models (for detecting persons)
@@ -74,14 +77,25 @@ def detect_on_person(original_image):
         max_output_size_per_class=50,
         max_total_size=50,
         iou_threshold=iou,
-        score_threshold=score
+        score_threshold=score_obj
     )
 
     for iscore in range(valid_detections.numpy()[0]):
-        if scores.numpy()[0][iscore] < score:
+        if scores.numpy()[0][iscore] < score_obj:
             send_notifier('no helmet ' + str(time.time()))
     
     return [valid_detections.numpy()[0], classes.numpy()[0], scores.numpy()[0]]
+
+
+def highlight_zone(image, x, y, w, h, color=(102, 255, 255)):
+    # First we crop the sub-rect from the image
+    sub_img = image[y:y+h, x:x+w]
+    white_rect = np.full(sub_img.shape, color, dtype=np.uint8)
+    res = cv2.addWeighted(sub_img, 0.5, white_rect, 0.5, 1.0)
+    # Putting the image back to its position
+    image[y:y+h, x:x+w] = res
+
+    return image
 
 
 def detection(id, endtime):
@@ -152,7 +166,7 @@ def detection(id, endtime):
             max_output_size_per_class=50,
             max_total_size=50,
             iou_threshold=iou,
-            score_threshold=score
+            score_threshold=score_human
         )
 
         # format bounding boxes from normalized ymin, xmin, ymax, xmax ---> xmin, ymin, xmax, ymax
@@ -176,11 +190,20 @@ def detection(id, endtime):
 
         result = np.asarray(image)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+
+
+        # highlight zone
+        if zone_highlighter:
+            result = highlight_zone(result, 1920 - 770, 0, 770, 1080)
+
+        # save as last deteciton
         cv2.imwrite(os.getcwd() + '/detections/last_frame.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-        
+        # save to stream directory
         frame_id += 1
         cv2.imwrite(os.getcwd() + '/detections/' + str(id) + '/' + str(frame_id).zfill(7) + '.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
 
+        if output:
+            out.write(result)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
