@@ -41,12 +41,14 @@ def recieve_api_request():
         INSERT INTO
           requests_log (access, start_time, endtime,
           place, controlplace, zone, activezone,
-          videostream, objective, bodyguard, active)
+          videostream, videostreamid, regulationid,
+          objective, bodyguard, active)
         VALUES
-          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {});
+          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {});
     """.format(req_data['access'], req_data['start_time'], req_data['endtime'],
         req_data['place'], req_data['controlplace'], req_data['zone'], req_data['activezone'],
-        req_data['videostream'], req_data['objective'], req_data['bodyguard'], req_data['active'])
+        req_data['videostream'], req_data['videostreamid'], req_data['regulationid'],
+        req_data['objective'], req_data['bodyguard'], req_data['active'])
 
     # execute the query (function returns id of the new row)
     id = db_execute_query(query)

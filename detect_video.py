@@ -26,7 +26,7 @@ tiny = False
 model = 'yolov4'
 video = os.getcwd() + '/data/video/ShortHelmets.mp4'
 # output = os.getcwd() + '/detections/result.avi'
-output = os.getcwd() + '/detections/result.avi'
+output = False
 output_format = 'XVID'
 iou = 0.45
 score_human = 0.25
@@ -35,7 +35,7 @@ count = False
 dont_show = True
 info = False
 skip = 0
-show_fps = True
+show_fps = False
 frame_id = 0
 zone_highlighter = False
 
