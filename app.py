@@ -4,7 +4,7 @@ from flask import Flask, render_template, Response, request
 from threading import Thread
 from camera import Camera
 from db_connection import *
-# from detect_video import *
+from detect_video import *
 
 
 app = Flask(__name__)
@@ -35,7 +35,6 @@ def stream(id):
 def recieve_api_request():
     # receive data in json format
     req_data = request.get_json()
-    print(req_data)
 
     # insert data to db
     query = """
@@ -53,14 +52,14 @@ def recieve_api_request():
     id = db_execute_query(query)
 
     # schedule detection if active == 1
-    # if req_data['active'] == 1:
-    #     s = sched.scheduler(time.time, time.sleep)
-    #     s.enter(req_data['start_time'] - int(time.time()), 0, detection, kwargs={'id': id, 'endtime': req_data['endtime']})
-    #     t = Thread(target=s.run)
-    #     t.start()
-    # elif req_data['active'] == 1 and req_data['start_time'] == 0:
-    #     t = Thread(target=detection, args=[id, 0])
-    #     t.start()
+    if req_data['active'] == 1:
+        s = sched.scheduler(time.time, time.sleep)
+        s.enter(req_data['start_time'] - int(time.time()), 0, detection, kwargs={'id': id, 'endtime': req_data['endtime']})
+        t = Thread(target=s.run)
+        t.start()
+    elif req_data['active'] == 1 and req_data['start_time'] == 0:
+        t = Thread(target=detection, args=[id, 0])
+        t.start()
 
     return 'success\n'
 
