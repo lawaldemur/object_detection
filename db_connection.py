@@ -24,6 +24,18 @@ def db_read_query(query):
     except Error as e:
         print(f"The error '{e}' occurred")
 
+def db_last_zone_coords(id):
+    connection = sqlite3.connect('db.sqlite')
+    cursor = connection.cursor()
+    result = None
+    try:
+        cursor.execute("SELECT * FROM zone_coords WHERE stream_id = {} ORDER BY id DESC LIMIT 1".format(id))
+        result = cursor.fetchone()
+        connection.close()
+        return result
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
 
 """
 curl --header "Content-Type: application/json" \

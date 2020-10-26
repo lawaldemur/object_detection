@@ -16,6 +16,7 @@ import numpy as np
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 from app import send_notifier
+from db_connection import *
 
 
 # main vars
@@ -28,16 +29,15 @@ video = os.getcwd() + '/data/video/ShortHelmets.mp4'
 # output = os.getcwd() + '/detections/result.avi'
 output = False
 output_format = 'XVID'
+save_last_frame = False
 iou = 0.45
 score_human = 0.25
 score_obj = 0.95
 count = False
 dont_show = True
 info = False
-skip = 0
+skip = 20
 show_fps = False
-frame_id = 0
-zone_highlighter = False
 
 
 print('start loading models...')
@@ -87,9 +87,17 @@ def detect_on_person(original_image):
     return [valid_detections.numpy()[0], classes.numpy()[0], scores.numpy()[0]]
 
 
+def get_zone_of_image(image, x, y, w, h):
+    return image[y:y+h, x:x+w]
+
+def put_image_on_image(image, res, x, y, w, h):
+    image[y:y+h, x:x+w] = res
+    return image
+
+
 def highlight_zone(image, x, y, w, h, color=(102, 255, 255)):
     # First we crop the sub-rect from the image
-    sub_img = image[y:y+h, x:x+w]
+    sub_img = get_zone_of_image(image, x, y, w, h)
     white_rect = np.full(sub_img.shape, color, dtype=np.uint8)
     res = cv2.addWeighted(sub_img, 0.5, white_rect, 0.5, 1.0)
     # Putting the image back to its position
@@ -109,6 +117,7 @@ def detection(id, endtime):
     video_path = video
     skip_frames = skip
     ended = False
+    zone_coords = False
     frame_id = 0
     os.mkdir(os.getcwd() + '/detections/' + str(id))
 
@@ -141,19 +150,30 @@ def detection(id, endtime):
         return_value, frame = vid.read()
         if return_value:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image = Image.fromarray(frame)
         else:
             print('Video has ended')
             ended = True
             break
 
-        frame_size = frame.shape[:2]
-        image_data = cv2.resize(frame, (input_size, input_size))
-        image_data = image_data / 255.
-        image_data = image_data[np.newaxis, ...].astype(np.float32)
+
         start_time = time.time()
 
+        # get zone coords from database
+        zone_coords = db_last_zone_coords(id)
+        if zone_coords:
+            # detect only inside of the zone
+            result_frame = get_zone_of_image(frame, zone_coords[2], zone_coords[3], zone_coords[4], zone_coords[5])
+        else:
+            result_frame = frame
+            
+        frame_size = result_frame.shape[:2]
+        image_data = cv2.resize(result_frame, (input_size, input_size))
+        image_data = image_data / 255.
+        image_data = image_data[np.newaxis, ...].astype(np.float32)
+        # detect on full image or part of image
         batch_data = tf.constant(image_data)
+
+
         pred_bbox = infer(batch_data)
         for key, value in pred_bbox.items():
             boxes = value[:, :, 0:4]
@@ -170,10 +190,11 @@ def detection(id, endtime):
         )
 
         # format bounding boxes from normalized ymin, xmin, ymax, xmax ---> xmin, ymin, xmax, ymax
-        original_h, original_w, _ = frame.shape
+        original_h, original_w, _ = result_frame.shape
         bboxes = utils.format_boxes(boxes.numpy()[0], original_h, original_w)
         obj_detections = []
-        
+
+        image = Image.fromarray(result_frame)
         for i in range(valid_detections.numpy()[0]):
             # save persons parts
             image_tmp = image.crop((bboxes[i][0] - 10, bboxes[i][1] - 10, bboxes[i][2] + 10, bboxes[i][3] + 10))
@@ -182,22 +203,28 @@ def detection(id, endtime):
             obj_detections.append(detect_on_person(image_tmp) + [['КАСКА', 'НЕТ КАСКИ']])
 
         pred_bbox = [bboxes, scores.numpy()[0], classes.numpy()[0], valid_detections.numpy()[0]]
-        image = utils.draw_bbox(frame, pred_bbox, obj_detections)
+        image = utils.draw_bbox(result_frame, pred_bbox, obj_detections)
 
         if show_fps:
             fps = 1.0 / (time.time() - start_time)
             print("FPS: %.2f" % fps)
 
+
+        if zone_coords:
+            image = put_image_on_image(frame, result_frame, zone_coords[2], zone_coords[3], zone_coords[4], zone_coords[5])
+
         result = np.asarray(image)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
+        if zone_coords:
+            # highlight zone
+            result = highlight_zone(result, zone_coords[2], zone_coords[3], zone_coords[4], zone_coords[5])
 
-        # highlight zone
-        if zone_highlighter:
-            result = highlight_zone(result, 1920 - 770, 0, 770, 1080)
 
-        # save as last deteciton
-        cv2.imwrite(os.getcwd() + '/detections/last_frame.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        if save_last_frame:
+            # save as last deteciton
+            cv2.imwrite(os.getcwd() + '/detections/last_frame.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        
         # save to stream directory
         frame_id += 1
         cv2.imwrite(os.getcwd() + '/detections/' + str(id) + '/' + str(frame_id).zfill(7) + '.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
