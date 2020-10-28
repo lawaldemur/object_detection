@@ -94,8 +94,8 @@ def put_image_on_image(image, res, x, y, w, h):
     image[y:y+h, x:x+w] = res
     return image
 
-def check_empty_zone_coords(zone_coords):
-    return int(set(zone_coords).pop()) == 0
+def check_not_empty_zone_coords(z):
+    return not(z[0] == 0 and z[1] == 0 and z[2] == 0 and z[3] == 0)
 
 
 def highlight_zone(image, x, y, w, h, color=(102, 255, 255)):

@@ -152,9 +152,9 @@ def change_coords():
     </soapenv:Envelope>""".format(x, y, width, height)
     body = body.encode(encoding='utf-8')
 
-    # post zone data
-    response = requests.post(url, data=body, auth=('WebServerVideo', 'Videoanalitika2020'))
-    # print(response)
+    print("ready to send post")
+    response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'))
+    print('post result: ' + str(response))
 
     return 'success\n'
 
