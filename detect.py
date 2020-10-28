@@ -164,7 +164,7 @@ def detection(id, endtime):
         # get zone coords from database
         zone_coords = db_task_info(id)[-4:]
 
-        if check_empty_zone_coords(zone_coords):
+        if check_not_empty_zone_coords(zone_coords):
             # detect only inside of the zone
             result_frame = get_zone_of_image(frame, zone_coords[0], zone_coords[1], zone_coords[2], zone_coords[3])
         else:
@@ -214,13 +214,13 @@ def detection(id, endtime):
             print("FPS: %.2f" % fps)
 
 
-        if check_empty_zone_coords(zone_coords):
+        if check_not_empty_zone_coords(zone_coords):
             image = put_image_on_image(frame, result_frame, zone_coords[0], zone_coords[1], zone_coords[2], zone_coords[3])
 
         result = np.asarray(image)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
-        if check_empty_zone_coords(zone_coords):
+        if check_not_empty_zone_coords(zone_coords):
             # highlight zone
             result = highlight_zone(result, zone_coords[0], zone_coords[1], zone_coords[2], zone_coords[3])
 
