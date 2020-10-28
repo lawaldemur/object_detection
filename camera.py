@@ -9,3 +9,7 @@ class Camera(object):
     		return open(list_of_files[-0], 'rb').read()
     	else:
         	return open(list_of_files[-2], 'rb').read()
+
+
+    def get_static(self, path):
+    	return open(path, 'rb').read()

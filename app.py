@@ -1,5 +1,6 @@
 import os, time, sched, json, requests
 from importlib import import_module
+from shutil import copyfile
 from flask import Flask, render_template, Response, request
 from threading import Thread
 from camera import Camera
@@ -7,8 +8,9 @@ from db_connection import *
 from detect import *
 
 
+# local: for mac os 0.0.0.0:5001, for windows 127.0.0.1:30
+ip, port = '0.0.0.0', 5001
 app = Flask(__name__)
-
 
 @app.route('/')
 def index():
@@ -17,8 +19,26 @@ def index():
 
 @app.route('/<id>')
 def stream_page(id):
-    # Video streaming home page.
-    return render_template('index.html', path=request.path[1:])
+    if not id.isdigit():
+        return '404'
+
+    if not db_task_info(id):
+        return 'no task planned'
+
+    if os.path.exists(os.getcwd() + '/detections/' + str(id)):
+        # Video streaming home page.
+        return render_template('index.html',
+            stream_url='/stream/' + request.path[1:],
+            id=request.path[1:])
+    else:
+        # create preview folder and add preview.jpeg there
+        if not os.path.exists(os.getcwd() + '/data/previews/' + str(id)+ '.jpeg'):
+            copyfile(os.getcwd() + '/data/images/preview.jpeg',
+                    os.getcwd() + '/data/previews/' + str(id) + '.jpeg')
+        # Show zone preview page.
+        return render_template('index.html',
+            stream_url='/preview/' + request.path[1:],
+            id=request.path[1:])
 
 
 def gen(camera, id):
@@ -28,11 +48,23 @@ def gen(camera, id):
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
+def static(camera, path):
+    frame = camera.get_static(path)
+    yield (b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
 
 @app.route('/stream/<id>')
 def stream(id):
     """Video streaming route"""
     return Response(gen(Camera(), id),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/preview/<id>')
+def preview(id):
+    """Video streaming route"""
+    return Response(static(Camera(), os.getcwd() + '/data/previews/' + str(id) + '.jpeg'),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
@@ -68,7 +100,7 @@ def recieve_api_request():
         t = Thread(target=s.run)
         t.start()
 
-    return 'success\n'
+    return 'http://' + ip + ':' + str(port) + '/' + str(id)
 
 
 @app.route('/change_zone')
@@ -82,12 +114,47 @@ def change_coords():
 
     # add info about new zone to database
     query = """
-        INSERT INTO
-          zone_coords (stream_id, x, y, width, height, timestamp)
-        VALUES
-          ({}, {}, {}, {}, {}, {});
-    """.format(stream_id, x, y, width, height, int(time.time()))
+        UPDATE requests_log
+        SET activezone = 1, x = {}, y = {}, width = {}, height = {}
+        WHERE id = {}
+    """.format(x, y, width, height, stream_id)
     db_execute_query(query)
+
+    image = cv2.imread(os.getcwd() + '/data/images/preview.jpeg')
+    image = highlight_zone(image, x, y, width, height)
+    cv2.imwrite(os.getcwd() + '/data/previews/' + str(stream_id) + '.jpeg',
+                image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+    # send updated zone to 1C
+    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoserverPoints/ExchangeVideoserverPoints.1cws?wsdl"
+    #headers = {'content-type': 'application/soap+xml'}
+    headers = {'content-type': 'text/xml'}
+    body = """
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:c="http://www.1c.exchange-videoserver-points.serv.org" xmlns:c1="http://www.1c.exchange-videoserver-points.org">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <c:addVSpoints>
+             <c:metadata>
+                <!--Optional:-->
+                <c1:idRequest>86032790-f41c-11ea-a41e-4cedfb43b7af</c1:idRequest>
+             </c:metadata>
+             <c:data>
+                <c1:pointX>{}</c1:pointX>
+                <c1:pointY>{}</c1:pointY>
+                <c1:width>{}</c1:width>
+                <c1:height>{}</c1:height>
+                <c1:idVideostream>86032790-f41c-11ea-a41e-4cedfb43b7af</c1:idVideostream>
+                <c1:idObjective>86032790-f41c-11ea-a41e-4cedfb43b7af</c1:idObjective>
+                <c1:zone>Холл в центре завода</c1:zone>
+             </c:data>
+          </c:addVSpoints>
+       </soapenv:Body>
+    </soapenv:Envelope>""".format(x, y, width, height)
+    body = body.encode(encoding='utf-8')
+
+    # post zone data
+    response = requests.post(url, data=body, auth=('WebServerVideo', 'Videoanalitika2020'))
+    # print(response)
 
     return 'success\n'
 
@@ -100,5 +167,4 @@ def send_notifier(obj):
 
 
 if __name__ == '__main__':
-	# local: for mac os 0.0.0.0:5000, for windows 127.0.0.1:30
-    app.run(host='0.0.0.0', port=5001, threaded=True)
+    app.run(host=ip, port=port, threaded=True)

@@ -17,7 +17,7 @@
   </head>
   <body>
   	<div id="image">
-    	<img src="/stream/{{ path }}" width="1280" height="720" id="show">
+    	<img src="{{ stream_url }}" width="1280" height="720" id="show">
     </div>
     <button id="zone_btn" class="unclicked">Отметить зону</button>
 
@@ -47,14 +47,16 @@
 				cropper.destroy()
 
                 $.getJSON($SCRIPT_ROOT + '/change_zone', {
-                    stream_id: {{ path }},
+                    stream_id: {{ id }},
                     x: coords.x,
                     y: coords.y,
                     width: coords.width,
                     height: coords.height
                 }, function() {
-                    console.log('done');
-                });                
+                    console.log("success");
+                });
+                
+                setTimeout(function(){ location.reload(); }, 500);
 			}
 		});
     </script>

@@ -159,10 +159,11 @@ def detection(id, endtime):
         start_time = time.time()
 
         # get zone coords from database
-        zone_coords = db_last_zone_coords(id)
+        zone_coords = db_task_info(id)[-4:]
+
         if zone_coords:
             # detect only inside of the zone
-            result_frame = get_zone_of_image(frame, zone_coords[2], zone_coords[3], zone_coords[4], zone_coords[5])
+            result_frame = get_zone_of_image(frame, zone_coords[0], zone_coords[1], zone_coords[2], zone_coords[3])
         else:
             result_frame = frame
             
@@ -211,14 +212,14 @@ def detection(id, endtime):
 
 
         if zone_coords:
-            image = put_image_on_image(frame, result_frame, zone_coords[2], zone_coords[3], zone_coords[4], zone_coords[5])
+            image = put_image_on_image(frame, result_frame, zone_coords[0], zone_coords[1], zone_coords[2], zone_coords[3])
 
         result = np.asarray(image)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
         if zone_coords:
             # highlight zone
-            result = highlight_zone(result, zone_coords[2], zone_coords[3], zone_coords[4], zone_coords[5])
+            result = highlight_zone(result, zone_coords[0], zone_coords[1], zone_coords[2], zone_coords[3])
 
 
         if save_last_frame:

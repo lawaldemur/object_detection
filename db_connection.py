@@ -3,38 +3,33 @@ import sqlite3
 def db_execute_query(query):
     connection = sqlite3.connect('db.sqlite')
     cursor = connection.cursor()
-    try:
-        cursor.execute(query)
-        connection.commit()
-        last_id = cursor.lastrowid
-        connection.close()
-        return last_id
-    except OperationalError as e:
-        print(f"The error '{e}' occurred")
+    
+    cursor.execute(query)
+    connection.commit()
+    last_id = cursor.lastrowid
+    connection.close()
+    return last_id
 
 def db_read_query(query):
     connection = sqlite3.connect('db.sqlite')
     cursor = connection.cursor()
     result = None
-    try:
-        cursor.execute(query)
-        result = cursor.fetchall()
-        connection.close()
-        return result
-    except Error as e:
-        print(f"The error '{e}' occurred")
 
-def db_last_zone_coords(id):
+    cursor.execute(query)
+    result = cursor.fetchall()
+    connection.close()
+    return result
+
+
+def db_task_info(id):
     connection = sqlite3.connect('db.sqlite')
     cursor = connection.cursor()
     result = None
-    try:
-        cursor.execute("SELECT * FROM zone_coords WHERE stream_id = {} ORDER BY id DESC LIMIT 1".format(id))
-        result = cursor.fetchone()
-        connection.close()
-        return result
-    except Error as e:
-        print(f"The error '{e}' occurred")
+
+    cursor.execute("SELECT * FROM requests_log WHERE id = {} ORDER BY id DESC LIMIT 1".format(id))
+    result = cursor.fetchone()
+    connection.close()
+    return result
 
 
 """
