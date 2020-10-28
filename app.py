@@ -150,6 +150,27 @@ def change_coords():
           </c:addVSpoints>
        </soapenv:Body>
     </soapenv:Envelope>""".format(x, y, width, height)
+    body = """
+    <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:c="http://www.1c.exchange-videoserver-points.serv.org" xmlns:c1="http://www.1c.exchange-videoserver-points.org">
+       <soap:Header/>
+       <soap:Body>
+          <c:addVSpoints>
+             <c:metadata>
+                <!--Optional:-->
+                <c1:idRequest>idRequest</c1:idRequest>
+             </c:metadata>
+             <c:data>
+                <c1:pointX>{}</c1:pointX>
+                <c1:pointY>{}</c1:pointY>
+                <c1:width>{}</c1:width>
+                <c1:height>{}</c1:height>
+                <c1:idVideostream>{}</c1:idVideostream>
+                <c1:idObjective>0</c1:idObjective>
+                <c1:zone>0</c1:zone>
+             </c:data>
+          </c:addVSpoints>
+       </soap:Body>
+    </soap:Envelope>""".format(x, y, width, height, stream_id)
     body = body.encode(encoding='utf-8')
 
     print("ready to send post")
