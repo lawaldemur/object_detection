@@ -131,12 +131,13 @@ def format_boxes(bboxes, image_height, image_width):
         box[0], box[1], box[2], box[3] = xmin, ymin, xmax, ymax
     return bboxes
 
-def draw_bbox(image, bboxes, obj_detections = False, info = False, counted_classes = None, show_label=True, classes=read_class_names(cfg.YOLO.CLASSES)):
+def draw_bbox(image, bboxes, obj_detections = False, obj_threshold=0.5, info = False, counted_classes = None, show_label=True, classes=read_class_names(cfg.YOLO.CLASSES)):
     num_classes = len(classes)
     image_h, image_w, _ = image.shape
     hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
     colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
     colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
+    violation = False
 
     random.seed(0)
     random.shuffle(colors)
@@ -154,21 +155,22 @@ def draw_bbox(image, bboxes, obj_detections = False, info = False, counted_class
         bbox_thick = int(0.6 * (image_h + image_w) / 600)
         c1, c2 = (coor[0], coor[1]), (coor[2], coor[3])
 
-        if obj_detections:
-            if obj_detections[i][2][0] >= 0.6:
+        if obj_detections[i][0] >= 1:
+            if obj_detections[i][2][0] >= obj_threshold:
                 bbox_color = (0, 255, 0)
             else:
                 bbox_color = (255, 0, 0)
+                violation = True
 
 
         cv2.rectangle(image, c1, c2, bbox_color, bbox_thick)
 
         if info:
-            print("Object found: {}, Confidence: {:.2f}, BBox Coords (xmin, ymin, xmax, ymax): {}, {}, {}, {} ".format(class_name, score, coor[0], coor[1], coor[2], coor[3]))
+            print("Object found: {}, Confidence: {:.2f}, Helmet: {:.2f}".format(class_name, score, obj_detections[i][2][0]))
 
         if show_label:
             if obj_detections:
-                if obj_detections[i][2][0] >= 0.6:
+                if obj_detections[i][2][0] >= obj_threshold:
                     bbox_mess = obj_detections[i][3][0] + ' ' + str(int(obj_detections[i][2][0] * 100)) + '%'
                 else:
                     bbox_mess = obj_detections[i][3][1] + ' ' + str(100 - int(obj_detections[i][2][0] * 100)) + '%'
@@ -189,7 +191,7 @@ def draw_bbox(image, bboxes, obj_detections = False, info = False, counted_class
                 cv2.putText(image, "{}s detected: {}".format(key, value), (5, offset),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 2)
                 offset += height_ratio
-    return image
+    return [image, violation]
 
 def bbox_iou(bboxes1, bboxes2):
     """

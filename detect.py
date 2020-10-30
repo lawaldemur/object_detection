@@ -1,4 +1,4 @@
-﻿import os, time, glob
+﻿import os, time, glob, base64
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -30,14 +30,16 @@ video = os.getcwd() + '/data/video/ShortHelmets.mp4'
 output = False
 output_format = 'XVID'
 save_last_frame = False
-iou = 0.45
-score_human = 0.25
-score_obj = 0.95
+iou = 0.5
+score_human = 0.7
+# score_obj = 0.6
 count = False
 dont_show = True
 info = False
-skip = 20
+skip = 29
 show_fps = False
+violation_threshold = 0.6
+check_in_frames = (15 * 30) // (skip + 1)
 
 
 print('start loading models...')
@@ -77,12 +79,8 @@ def detect_on_person(original_image):
         max_output_size_per_class=50,
         max_total_size=50,
         iou_threshold=iou,
-        score_threshold=score_obj
+        score_threshold=0
     )
-
-    for iscore in range(valid_detections.numpy()[0]):
-        if scores.numpy()[0][iscore] < score_obj:
-            send_notifier('no helmet ' + str(time.time()))
     
     return [valid_detections.numpy()[0], classes.numpy()[0], scores.numpy()[0]]
 
@@ -122,6 +120,7 @@ def detection(id, endtime):
     ended = False
     zone_coords = False
     frame_id = 0
+    violations = []
     os.mkdir(os.getcwd() + '/detections/' + str(id))
 
     # begin video capture
@@ -207,7 +206,23 @@ def detection(id, endtime):
             obj_detections.append(detect_on_person(image_tmp) + [['КАСКА', 'НЕТ КАСКИ']])
 
         pred_bbox = [bboxes, scores.numpy()[0], classes.numpy()[0], valid_detections.numpy()[0]]
-        image = utils.draw_bbox(result_frame, pred_bbox, obj_detections)
+        image, violation = utils.draw_bbox(result_frame, pred_bbox, obj_detections, obj_threshold=0.86)
+
+        violations.append(violation)
+
+        # violaton sending
+        # ((20 * 30) // (skip + 1)) + 1 equals 20 seconds of stream approximately 
+        while len(violations) > check_in_frames:
+            del violations[0]
+
+
+        notify = False
+        if len(violations) == check_in_frames:
+            avg_violation = sum([int(i) for i in violations]) / len(violations)
+            if avg_violation > violation_threshold:
+                notify = True
+                violations.clear()
+
 
         if show_fps:
             fps = 1.0 / (time.time() - start_time)
@@ -232,6 +247,10 @@ def detection(id, endtime):
         # save to stream directory
         frame_id += 1
         cv2.imwrite(os.getcwd() + '/detections/' + str(id) + '/' + str(frame_id).zfill(7) + '.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+        if notify:
+            tmp, buffer = cv2.imencode('.jpeg', result)
+            send_notifier(id, base64.b64encode(buffer))
 
         if output:
             out.write(result)

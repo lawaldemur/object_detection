@@ -17,7 +17,7 @@
   </head>
   <body>
   	<div id="image">
-    	<img src="{{ stream_url }}" width="1280" height="720" id="show">
+    	<img src="{{ stream_url }}" width="1280" height="720" id="show" class="{{ target }}">
     </div>
     <button id="zone_btn" class="unclicked">Отметить зону</button>
 
@@ -28,12 +28,16 @@
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
     	var cropper = false;
+        var stream_id = {{ id }};
 
 		$('#zone_btn').on('click', function(event) {
 			if ($(this).hasClass('unclicked'))
 			{
 				$(this).removeClass('unclicked').addClass('clicked')
 				$(this).text('Подтвердить')
+
+                if ($('#show').hasClass('stream'))
+                    $('#show').attr('src', '/photo/' + stream_id.toString());
 
 				cropper = new Cropper(document.getElementById('show'), {
 				  background: false,
@@ -46,8 +50,11 @@
                 var coords = cropper.getData(true)
 				cropper.destroy()
 
+                if ($('#show').hasClass('stream'))
+                    $('#show').attr('src', '/stream/' + stream_id.toString());
+
                 $.getJSON($SCRIPT_ROOT + '/change_zone', {
-                    stream_id: {{ id }},
+                    stream_id: stream_id,
                     x: coords.x,
                     y: coords.y,
                     width: coords.width,
@@ -56,7 +63,10 @@
                     console.log("success");
                 });
                 
-                setTimeout(function(){ location.reload(); }, 500);
+                if ($('#show').hasClass('preview'))
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
 			}
 		});
     </script>
