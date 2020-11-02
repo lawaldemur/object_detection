@@ -30,7 +30,7 @@ video = os.getcwd() + '/data/video/ShortHelmets.mp4'
 output = False
 output_format = 'XVID'
 save_last_frame = False
-iou = 0.5
+iou = 0.6
 score_human = 0.7
 # score_obj = 0.6
 count = False
@@ -59,13 +59,14 @@ def detect_on_person(original_image):
 
     image_data = cv2.resize(original_image, (input_size, input_size))
     image_data = image_data / 255.
+    image_data = image_data[np.newaxis, ...].astype(np.float32)
 
-    images_data = []
-    for i in range(1):
-        images_data.append(image_data)
-    images_data = np.asarray(images_data).astype(np.float32)
+    # images_data = []
+    # for i in range(1):
+    #     images_data.append(image_data)
+    # images_data = np.asarray(images_data).astype(np.float32)
 
-    batch_data = tf.constant(images_data)
+    batch_data = tf.constant(image_data)
     pred_bbox = infer2(batch_data)
     for key, value in pred_bbox.items():
         boxes = value[:, :, 0:4]

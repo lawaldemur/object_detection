@@ -28,9 +28,9 @@ def stream_page(id):
     if os.path.exists(os.getcwd() + '/detections/' + str(id)):
         # Video streaming home page.
         return render_template('index.html',
-            stream_url='/stream/' + request.path[1:],
+            stream_url='/stream/' + str(id),
             target='stream',
-            id=request.path[1:])
+            id=str(id))
     else:
         # create preview folder and add preview.jpeg there
         if not os.path.exists(os.getcwd() + '/data/previews/' + str(id)+ '.jpeg'):
@@ -38,9 +38,48 @@ def stream_page(id):
                     os.getcwd() + '/data/previews/' + str(id) + '.jpeg')
         # Show zone preview page.
         return render_template('index.html',
-            stream_url='/preview/' + request.path[1:],
+            stream_url='/preview/' + str(id),
             target='preview',
-            id=request.path[1:])
+            id=str(id))
+
+
+@app.route('/<id>/zone')
+def zone_selection(id):
+    if not id.isdigit():
+        return '404'
+
+    if not db_task_info(id):
+        return 'no task planned'
+
+    if os.path.exists(os.getcwd() + '/detections/' + str(id)):
+        # Video streaming home page.
+        return render_template('index.html',
+            stream_url='/photo/' + str(id),
+            target='photo',
+            id=str(id))
+    else:
+        # create preview folder and add preview.jpeg there
+        if not os.path.exists(os.getcwd() + '/data/previews/' + str(id)+ '.jpeg'):
+            copyfile(os.getcwd() + '/data/images/preview.jpeg',
+                    os.getcwd() + '/data/previews/' + str(id) + '.jpeg')
+        # Show zone preview page.
+        return render_template('index.html',
+            stream_url='/preview/' + str(id),
+            target='preview',
+            id=str(id))
+
+
+@app.route('/<id>/preview')
+def preview_page(id):
+    # create preview folder and add preview.jpeg there
+    if not os.path.exists(os.getcwd() + '/data/previews/' + str(id)+ '.jpeg'):
+        copyfile(os.getcwd() + '/data/images/preview.jpeg',
+                os.getcwd() + '/data/previews/' + str(id) + '.jpeg')
+    # Show zone preview page.
+    return render_template('index.html',
+        stream_url='/preview/' + str(id),
+        target='preview',
+        id=str(id))
 
 
 def gen(camera, id):
@@ -94,13 +133,14 @@ def recieve_api_request():
           requests_log (access, start_time, endtime,
           place, controlplace, zone, activezone,
           videostream, videostreamid, regulationid,
-          objective, bodyguard, active)
+          objective, bodyguard, active, pointx, pointy, width, height)
         VALUES
-          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {});
+          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {}, {}, {}, {}, {});
     """.format(req_data['access'], req_data['start_time'], req_data['endtime'],
         req_data['place'], req_data['controlplace'], req_data['zone'], req_data['activezone'],
         req_data['videostream'], req_data['videostreamid'], req_data['regulationid'],
-        req_data['objective'], json.dumps(req_data['bodyguard']), req_data['active'])
+        req_data['objective'], json.dumps(req_data['bodyguard']), req_data['active'],
+        req_data['pointx'], req_data['pointy'], req_data['width'], req_data['height'])
 
     # execute the query (function returns id of the new row)
     id = db_execute_query(query)
@@ -130,7 +170,7 @@ def change_coords():
     # add info about new zone to database
     query = """
         UPDATE requests_log
-        SET activezone = 1, x = {}, y = {}, width = {}, height = {}
+        SET activezone = 1, pointx = {}, pointy = {}, width = {}, height = {}
         WHERE id = {}
     """.format(x, y, width, height, stream_id)
     db_execute_query(query)
@@ -171,7 +211,7 @@ def change_coords():
     body = body.encode(encoding='utf-8')
 
     response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
-    # print('sending zone coords result: ' + str(response))
+    # print('sending zone coords result: ' + str(response.text))
 
     return 'success\n'
 
@@ -213,7 +253,7 @@ def send_notifier(stream_id, base64image):
     body = body.encode(encoding='utf-8')
 
     response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
-    # print('sending violated image result: ' + str(response))
+    # print('sending violated image result: ' + str(response.text))
 
     return 'success\n'
 
