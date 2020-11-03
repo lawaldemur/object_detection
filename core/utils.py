@@ -131,7 +131,7 @@ def format_boxes(bboxes, image_height, image_width):
         box[0], box[1], box[2], box[3] = xmin, ymin, xmax, ymax
     return bboxes
 
-def draw_bbox(image, bboxes, obj_detections = False, obj_threshold=0.5, info = False, counted_classes = None, show_label=True, classes=read_class_names(cfg.YOLO.CLASSES)):
+def draw_bbox(image, bboxes, obj_detections = False, obj_threshold=0.7, info = False, counted_classes = None, show_label=True, classes=read_class_names(cfg.YOLO.CLASSES)):
     num_classes = len(classes)
     image_h, image_w, _ = image.shape
     hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]

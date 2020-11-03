@@ -181,20 +181,20 @@ def change_coords():
                 image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
 
     stream_info = db_task_info(stream_id)
-    idVideostream, idObjective, zone = stream_info[9], stream_info[11], stream_info[6]
+    idVideostream, idPlace, zone = stream_info[9], stream_info[4], stream_info[6]
 
     # send updated zone to 1C
-    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoserverPoints/ExchangeVideoserverPoints.1cws"
+    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws"
     #headers = {'content-type': 'application/soap+xml'}
     headers = {'content-type': 'text/xml'}
     body = """
-    <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:c="http://www.1c.exchange-videoserver-points.serv.org" xmlns:c1="http://www.1c.exchange-videoserver-points.org">
-       <soap:Header/>
+    <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:c="http://www.1c.exchange-videoserver-areas.serv.org" xmlns:c1="http://www.1c.exchange-videoserver-areas.org">
+    <soap:Header/>
        <soap:Body>
-          <c:addVSpoints>
+          <c:addVSareas>
              <c:metadata>
                 <!--Optional:-->
-                <c1:idRequest>idRequest</c1:idRequest>
+                <c1:idRequest>idRequest_2</c1:idRequest>
              </c:metadata>
              <c:data>
                 <c1:pointX>{}</c1:pointX>
@@ -202,12 +202,13 @@ def change_coords():
                 <c1:width>{}</c1:width>
                 <c1:height>{}</c1:height>
                 <c1:idVideostream>{}</c1:idVideostream>
-                <c1:idObjective>{}</c1:idObjective>
+                <c1:idPlace>{}</c1:idPlace>
+                <!--Optional:-->
                 <c1:zone>{}</c1:zone>
              </c:data>
-          </c:addVSpoints>
+          </c:addVSareas>
        </soap:Body>
-    </soap:Envelope>""".format(x, y, width, height, idVideostream, idObjective, zone)
+    </soap:Envelope>""".format(x, y, width, height, idVideostream, idPlace, zone)
     body = body.encode(encoding='utf-8')
 
     response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
@@ -219,20 +220,24 @@ def change_coords():
 def send_notifier(stream_id, base64image):
     stream_info = db_task_info(stream_id)
     idAccess, idVideostream, idRegulation, idObjective = stream_info[1], stream_info[9], stream_info[10], stream_info[11]
-    dateOffense = str(datetime.datetime.now())
+    # dateOffense = str(datetime.datetime.now())
+    dateOffense = "2002-05-30T09:30:10+06:00"
+
+    idOrganization, idDepartment = "925c51e7-0bec-11eb-8133-00155d3c2b05", "00000000-0000-0000-0000-000000000000"
+    idObjective = "cae64053-0c86-11eb-8133-00155d3c2b05"
 
     # send violated image to 1C
-    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoservers/ExchangeVideoserver.1cws"
+    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws"
     #headers = {'content-type': 'application/soap+xml'}
     headers = {'content-type': 'text/xml'}
     body = """
-    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:c="http://www.1c.exchange-videoserver.serv.org" xmlns:c1="http://www.1c.exchange-videoserver.org">
-       <soapenv:Header/>
-       <soapenv:Body>
-          <c:addVSdata>
+    <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:c="http://www.1c.exchange-videoserver-offences.serv.org" xmlns:c1="http://www.1c.exchange-videoserver-offences.org">
+       <soap:Header/>
+       <soap:Body>
+          <c:addVSoffence>
              <c:metadata>
                 <!--Optional:-->
-                <c1:idRequest>b9d5929s-198f-11eb-sj11-00155d3c9m27</c1:idRequest>
+                <c1:idRequest>idRequest_5</c1:idRequest>
              </c:metadata>
              <c:data>
                 <!--Optional:-->
@@ -241,19 +246,19 @@ def send_notifier(stream_id, base64image):
                 <c1:idObjective>{}</c1:idObjective>
                 <c1:idRegulation>{}</c1:idRegulation>
                 <!--Optional:-->
-                <c1:idOrganization>925c51e7-0bec-11eb-8133-00155d3c2b05</c1:idOrganization>
+                <c1:idOrganization>{}</c1:idOrganization>
                 <!--Optional:-->
-                <c1:idDepartment>925c51e8-0bec-11eb-8133-00155d3c2b05</c1:idDepartment>
+                <c1:idDepartment>{}</c1:idDepartment>
                 <c1:dateOffense>{}</c1:dateOffense>
                 <c1:image>{}</c1:image>
-              </c:data>
-          </c:addVSdata>
-       </soapenv:Body>
-    </soapenv:Envelope>""".format(idAccess, idVideostream, idObjective, idRegulation, dateOffense, base64image)
+            </c:data>
+          </c:addVSoffence>
+       </soap:Body>
+    </soap:Envelope>""".format(idAccess, idVideostream, idObjective, idRegulation, idOrganization, idDepartment, dateOffense, base64image)
     body = body.encode(encoding='utf-8')
 
     response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
-    # print('sending violated image result: ' + str(response.text))
+    print('sending violated image result: ' + str(response.text))
 
     return 'success\n'
 

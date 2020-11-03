@@ -30,15 +30,15 @@ video = os.getcwd() + '/data/video/ShortHelmets.mp4'
 output = False
 output_format = 'XVID'
 save_last_frame = False
-iou = 0.6
-score_human = 0.7
+iou = 0.5
+score_human = 0.76
 # score_obj = 0.6
 count = False
 dont_show = True
 info = False
 skip = 29
 show_fps = False
-violation_threshold = 0.6
+violation_threshold = 0.5
 check_in_frames = (15 * 30) // (skip + 1)
 
 
