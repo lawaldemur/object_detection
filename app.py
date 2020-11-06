@@ -132,18 +132,24 @@ def recieve_api_request():
         INSERT INTO
           requests_log (access, start_time, endtime,
           place, controlplace, zone, activezone,
-          videostream, videostreamid, regulationid,
+          videostream, videostreamid, regulationid, iddepartment,
           objective, bodyguard, active, pointx, pointy, width, height)
         VALUES
           (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {}, {}, {}, {}, {});
     """.format(req_data['access'], req_data['start_time'], req_data['endtime'],
         req_data['place'], req_data['controlplace'], req_data['zone'], req_data['activezone'],
-        req_data['videostream'], req_data['videostreamid'], req_data['regulationid'],
+        req_data['videostream'], req_data['videostreamid'], req_data['regulationid'], req_data['idDepartment'],
         req_data['objective'], json.dumps(req_data['bodyguard']), req_data['active'],
         req_data['pointx'], req_data['pointy'], req_data['width'], req_data['height'])
 
     # execute the query (function returns id of the new row)
     id = db_execute_query(query)
+
+    if req_data['pointx'] != 0 and req_data['width'] != 0:
+        image = cv2.imread(os.getcwd() + '/data/images/preview.jpeg')
+        image = highlight_zone(image, req_data['pointx'], req_data['pointy'], req_data['width'], req_data['height'])
+        cv2.imwrite(os.getcwd() + '/data/previews/' + str(id) + '.jpeg',
+                    image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
 
     # start detection immediately if start_time less than now or schedule detection
     if req_data['active'] == 1 and req_data['start_time'] <= int(time.time()):
@@ -184,7 +190,7 @@ def change_coords():
     idVideostream, idPlace, zone = stream_info[9], stream_info[4], stream_info[6]
 
     # send updated zone to 1C
-    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws"
+    url="https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws"
     #headers = {'content-type': 'application/soap+xml'}
     headers = {'content-type': 'text/xml'}
     body = """
@@ -212,22 +218,20 @@ def change_coords():
     body = body.encode(encoding='utf-8')
 
     response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
-    # print('sending zone coords result: ' + str(response.text))
+    print('sending zone coords result: ' + str(response.text))
 
     return 'success\n'
 
 
 def send_notifier(stream_id, base64image):
     stream_info = db_task_info(stream_id)
-    idAccess, idVideostream, idRegulation, idObjective = stream_info[1], stream_info[9], stream_info[10], stream_info[11]
-    # dateOffense = str(datetime.datetime.now())
-    dateOffense = "2002-05-30T09:30:10+06:00"
-
-    idOrganization, idDepartment = "925c51e7-0bec-11eb-8133-00155d3c2b05", "00000000-0000-0000-0000-000000000000"
-    idObjective = "cae64053-0c86-11eb-8133-00155d3c2b05"
+    idAccess, idVideostream, idRegulation, idOrganization, idDepartment, idObjective = stream_info[1], stream_info[9], stream_info[10], stream_info[11], stream_info[12], stream_info[13]
+    idAccess = "00000000-0000-0000-0000-000000000000" if idAccess == "0" else idAccess
+    now = datetime.now()
+    dateOffense = now.strftime("%Y-%m-%d") + "T" + now.strftime("%H:%M:%S")
 
     # send violated image to 1C
-    url="https://db.1c-ksu.ru/VA_Prombez2/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws"
+    url="https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws"
     #headers = {'content-type': 'application/soap+xml'}
     headers = {'content-type': 'text/xml'}
     body = """

@@ -173,7 +173,9 @@ def draw_bbox(image, bboxes, obj_detections = False, obj_threshold=0.7, info = F
                 if obj_detections[i][2][0] >= obj_threshold:
                     bbox_mess = obj_detections[i][3][0] + ' ' + str(int(obj_detections[i][2][0] * 100)) + '%'
                 else:
-                    bbox_mess = obj_detections[i][3][1] + ' ' + str(100 - int(obj_detections[i][2][0] * 100)) + '%'
+                    probability = (100 - int(obj_detections[i][2][0] * 100))
+                    probability = probability + 50 if probability < 50 else probability
+                    bbox_mess = obj_detections[i][3][1] + ' ' + str(probability) + '%'
             else:
                 bbox_mess = '%s: %.2f' % (class_name, score)
 

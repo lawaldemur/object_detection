@@ -32,14 +32,14 @@ output_format = 'XVID'
 save_last_frame = False
 iou = 0.5
 score_human = 0.76
-# score_obj = 0.6
+score_obj = 0.88
 count = False
 dont_show = True
 info = False
 skip = 29
 show_fps = False
 violation_threshold = 0.5
-check_in_frames = (15 * 30) // (skip + 1)
+check_in_frames = (5 * 30) // (skip + 1)
 
 
 print('start loading models...')
@@ -207,12 +207,11 @@ def detection(id, endtime):
             obj_detections.append(detect_on_person(image_tmp) + [['КАСКА', 'НЕТ КАСКИ']])
 
         pred_bbox = [bboxes, scores.numpy()[0], classes.numpy()[0], valid_detections.numpy()[0]]
-        image, violation = utils.draw_bbox(result_frame, pred_bbox, obj_detections, obj_threshold=0.86)
+        image, violation = utils.draw_bbox(result_frame, pred_bbox, obj_detections, obj_threshold=score_obj)
 
         violations.append(violation)
 
         # violaton sending
-        # ((20 * 30) // (skip + 1)) + 1 equals 20 seconds of stream approximately 
         while len(violations) > check_in_frames:
             del violations[0]
 
@@ -251,7 +250,7 @@ def detection(id, endtime):
 
         if notify:
             tmp, buffer = cv2.imencode('.jpeg', result)
-            send_notifier(id, base64.b64encode(buffer))
+            send_notifier(id, base64.b64encode(buffer).decode('utf-8'))
 
         if output:
             out.write(result)
