@@ -19,6 +19,7 @@ from app import send_notifier
 from db_connection import *
 
 
+equipment_names = ['КАСКА', 'НЕТ КАСКИ']
 # main vars
 framework = 'tf'
 weights = os.getcwd() + '/checkpoints/yolov4-416'
@@ -26,10 +27,12 @@ size = 416
 tiny = False
 model = 'yolov4'
 video = os.getcwd() + '/data/video/ShortHelmets.mp4'
+detection_folder = '/detections'
 # output = os.getcwd() + '/detections/result.avi'
 output = False
 output_format = 'XVID'
 save_last_frame = False
+last_frame_name = 'last_frame.jpeg'
 iou = 0.5
 score_human = 0.76
 score_obj = 0.88
@@ -204,7 +207,7 @@ def detection(id, endtime):
             image_tmp = image.crop((bboxes[i][0] - 10, bboxes[i][1] - 10, bboxes[i][2] + 10, bboxes[i][3] + 10))
             image_tmp = cv2.cvtColor(np.array(image_tmp), cv2.COLOR_BGR2RGB)
 
-            obj_detections.append(detect_on_person(image_tmp) + [['КАСКА', 'НЕТ КАСКИ']])
+            obj_detections.append(detect_on_person(image_tmp) + [equipment_names])
 
         pred_bbox = [bboxes, scores.numpy()[0], classes.numpy()[0], valid_detections.numpy()[0]]
         image, violation = utils.draw_bbox(result_frame, pred_bbox, obj_detections, obj_threshold=score_obj)
@@ -242,11 +245,11 @@ def detection(id, endtime):
 
         if save_last_frame:
             # save as last deteciton
-            cv2.imwrite(os.getcwd() + '/detections/last_frame.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+            cv2.imwrite(os.getcwd() + detection_folder + '/' + last_frame_name, result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
         
         # save to stream directory
         frame_id += 1
-        cv2.imwrite(os.getcwd() + '/detections/' + str(id) + '/' + str(frame_id).zfill(7) + '.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        cv2.imwrite(os.getcwd() + detection_folder + '/' + str(id) + '/' + str(frame_id).zfill(7) + '.jpeg', result, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
 
         if notify:
             tmp, buffer = cv2.imencode('.jpeg', result)
