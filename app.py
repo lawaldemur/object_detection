@@ -8,8 +8,12 @@ from db_connection import *
 from detect import *
 
 
+with open(os.getcwd() + '/config.json') as json_config:
+    config = json.load(json_config)['server']
+    detection_folder = json.load(json_config)['detection']['detection_folder']
+
 # local: for mac os 0.0.0.0:5001, for windows 127.0.0.1:30
-ip, port = '0.0.0.0', 5001
+ip, port = config['host'], config['port']
 app = Flask(__name__)
 
 @app.route('/')
@@ -25,7 +29,7 @@ def stream_page(id):
     if not db_task_info(id):
         return 'no task planned'
 
-    if os.path.exists(os.getcwd() + '/detections/' + str(id)):
+    if os.path.exists(os.getcwd() + detection_folder + '/' + str(id)):
         # Video streaming home page.
         return render_template('index.html',
             stream_url='/stream/' + str(id),
@@ -51,7 +55,7 @@ def zone_selection(id):
     if not db_task_info(id):
         return 'no task planned'
 
-    if os.path.exists(os.getcwd() + '/detections/' + str(id)):
+    if os.path.exists(os.getcwd() + detection_folder + '/' + str(id)):
         # Video streaming home page.
         return render_template('index.html',
             stream_url='/photo/' + str(id),
@@ -132,13 +136,13 @@ def recieve_api_request():
         INSERT INTO
           requests_log (access, start_time, endtime,
           place, controlplace, zone, activezone,
-          videostream, videostreamid, regulationid, iddepartment,
+          videostream, videostreamid, regulationid, organizationid, iddepartment,
           objective, bodyguard, active, pointx, pointy, width, height)
         VALUES
-          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {}, {}, {}, {}, {});
+          (\'{}\', {}, {}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {}, {}, {}, {}, {});
     """.format(req_data['access'], req_data['start_time'], req_data['endtime'],
         req_data['place'], req_data['controlplace'], req_data['zone'], req_data['activezone'],
-        req_data['videostream'], req_data['videostreamid'], req_data['regulationid'], req_data['idDepartment'],
+        req_data['videostream'], req_data['videostreamid'], req_data['regulationid'], req_data['organizationid'], req_data['departmentid'],
         req_data['objective'], json.dumps(req_data['bodyguard']), req_data['active'],
         req_data['pointx'], req_data['pointy'], req_data['width'], req_data['height'])
 
@@ -190,7 +194,7 @@ def change_coords():
     idVideostream, idPlace, zone = stream_info[9], stream_info[4], stream_info[6]
 
     # send updated zone to 1C
-    url="https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws"
+    url = config['1cksu_auth']['url_areas']
     #headers = {'content-type': 'application/soap+xml'}
     headers = {'content-type': 'text/xml'}
     body = """
@@ -217,8 +221,8 @@ def change_coords():
     </soap:Envelope>""".format(x, y, width, height, idVideostream, idPlace, zone)
     body = body.encode(encoding='utf-8')
 
-    response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
-    print('sending zone coords result: ' + str(response.text))
+    response = requests.post(url, data=body, headers=headers, auth=(config['1cksu_auth']['login'], config['1cksu_auth']['password']), verify=False)
+    # print('sending zone coords result: ' + str(response.text))
 
     return 'success\n'
 
@@ -231,7 +235,7 @@ def send_notifier(stream_id, base64image):
     dateOffense = now.strftime("%Y-%m-%d") + "T" + now.strftime("%H:%M:%S")
 
     # send violated image to 1C
-    url="https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws"
+    url = config['1cksu_auth']['url_offences']
     #headers = {'content-type': 'application/soap+xml'}
     headers = {'content-type': 'text/xml'}
     body = """
@@ -261,8 +265,8 @@ def send_notifier(stream_id, base64image):
     </soap:Envelope>""".format(idAccess, idVideostream, idObjective, idRegulation, idOrganization, idDepartment, dateOffense, base64image)
     body = body.encode(encoding='utf-8')
 
-    response = requests.post(url, data=body, headers=headers, auth=('WebServerVideo', 'Videoanalitika2020'), verify=False)
-    print('sending violated image result: ' + str(response.text))
+    response = requests.post(url, data=body, headers=headers, auth=(config['1cksu_auth']['login'], config['1cksu_auth']['password']), verify=False)
+    # print('sending violated image result: ' + str(response.text))
 
     return 'success\n'
 

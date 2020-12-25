@@ -1,4 +1,4 @@
-﻿import os, time, glob, base64
+﻿import os, time, glob, base64, json
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -18,21 +18,16 @@ from tensorflow.compat.v1 import InteractiveSession
 from app import send_notifier
 from db_connection import *
 
+with open(os.getcwd() + '/config.json') as json_config:
+    config = json.load(json_config)['detection']
 
-equipment_names = ['КАСКА', 'НЕТ КАСКИ']
 # main vars
 framework = 'tf'
-weights = os.getcwd() + '/checkpoints/yolov4-416'
 size = 416
 tiny = False
 model = 'yolov4'
-video = os.getcwd() + '/data/video/ShortHelmets.mp4'
-detection_folder = '/detections'
-# output = os.getcwd() + '/detections/result.avi'
-output = False
 output_format = 'XVID'
-save_last_frame = False
-last_frame_name = 'last_frame.jpeg'
+
 iou = 0.5
 score_human = 0.76
 score_obj = 0.88
@@ -45,12 +40,22 @@ violation_threshold = 0.5
 check_in_frames = (5 * 30) // (skip + 1)
 
 
+weights = os.getcwd() + config['people_model']
+video = os.getcwd() + config['detecting_video']
+detection_folder = config['detection_folder']
+output = config['output']
+output_path = config['output_path']
+save_last_frame = config['last_frame']
+last_frame_name = config['last_frame_name']
+helmet_weights = os.getcwd() + config['helmet_model']
+equipment_names = config['equipment_names']
+
 print('start loading models...')
 # main models (for detecting persons)
 saved_model_loaded = tf.saved_model.load(weights, tags=[tag_constants.SERVING])
 infer = saved_model_loaded.signatures['serving_default']
 # additional models (only helmets yet)
-additional_models = [tf.saved_model.load('./checkpoints/yolov4-helmet', tags=[tag_constants.SERVING])]
+additional_models = [tf.saved_model.load(helmet_weights, tags=[tag_constants.SERVING])]
 infer2 = additional_models[0].signatures['serving_default']
 print('models loaded')
 
@@ -125,7 +130,7 @@ def detection(id, endtime):
     zone_coords = False
     frame_id = 0
     violations = []
-    os.mkdir(os.getcwd() + '/detections/' + str(id))
+    os.mkdir(os.getcwd() + detection_folder + '/' + str(id))
 
     # begin video capture
     try:
@@ -141,7 +146,7 @@ def detection(id, endtime):
         height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = int(vid.get(cv2.CAP_PROP_FPS))
         codec = cv2.VideoWriter_fourcc(*output_format)
-        out = cv2.VideoWriter(output, codec, fps, (width, height))
+        out = cv2.VideoWriter(output_path, codec, fps, (width, height))
 
 
     while True:

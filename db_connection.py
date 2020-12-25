@@ -1,7 +1,14 @@
 import sqlite3
+import json
+import os
+
+
+with open(os.getcwd() + '/config.json') as json_config:
+    config = json.load(json_config)['server']
+
 
 def db_execute_query(query):
-    connection = sqlite3.connect('db.sqlite')
+    connection = sqlite3.connect(config['db'])
     cursor = connection.cursor()
     
     cursor.execute(query)
@@ -11,7 +18,7 @@ def db_execute_query(query):
     return last_id
 
 def db_read_query(query):
-    connection = sqlite3.connect('db.sqlite')
+    connection = sqlite3.connect(config['db'])
     cursor = connection.cursor()
     result = None
 
@@ -22,7 +29,7 @@ def db_read_query(query):
 
 
 def db_task_info(id):
-    connection = sqlite3.connect('db.sqlite')
+    connection = sqlite3.connect(config['db'])
     cursor = connection.cursor()
     result = None
 

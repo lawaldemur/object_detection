@@ -1,0 +1,24 @@
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": "5001",
+        "db": "db.sqlite",
+        "1cksu_auth": {
+            "url_offences": "https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws",
+            "url_areas": "https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws",
+            "login": "WebServerVideo",
+            "password": "Videoanalitika2020"
+        }
+    },
+    "detection": {
+        "people_model": "/checkpoints/yolov4-416",
+        "detecting_video": "/data/video/ShortHelmets.mp4",
+        "detection_folder": "/detections",
+        "output": false,
+        "output_path": "/detections/result.avi",
+        "last_frame": false,
+        "last_frame_name": "last_frame.jpeg",
+        "helmet_model": "/checkpoints/yolov4-helmet",
+        "equipment_names": ["КАСКА", "НЕТ КАСКИ"]
+    }
+}
