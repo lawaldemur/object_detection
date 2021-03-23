@@ -135,13 +135,8 @@ def draw_bbox(image, bboxes, obj_detections = False, obj_threshold=0.7, info = F
     num_classes = len(classes)
     image_h, image_w, _ = image.shape
     hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
-    colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
-    colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
-    violation = False
 
-    random.seed(0)
-    random.shuffle(colors)
-    random.seed(None)
+    violation = False
 
     out_boxes, out_scores, out_classes, num_boxes = bboxes
     for i in range(num_boxes):
@@ -151,48 +146,62 @@ def draw_bbox(image, bboxes, obj_detections = False, obj_threshold=0.7, info = F
         score = out_scores[i]
         class_ind = int(out_classes[i])
         class_name = classes[class_ind]
-        bbox_color = colors[class_ind]
         bbox_thick = int(0.6 * (image_h + image_w) / 600)
         c1, c2 = (coor[0], coor[1]), (coor[2], coor[3])
 
-        if obj_detections[i][0] >= 1:
-            if obj_detections[i][2][0] >= obj_threshold:
-                bbox_color = (0, 255, 0)
-            else:
-                bbox_color = (255, 0, 0)
-                violation = True
+        bbox_color = (255, 255, 255)
+        # for j in range(len(obj_detections[i])):
+        #     if obj_detections[i][j][0] >= 1:
+        #         if obj_detections[i][j][2][0] < obj_threshold:
+        #             violation = True
+        #             bbox_color = (255, 0, 0)
+        #             break
+            
 
+        # border around the person
+        
 
-        cv2.rectangle(image, c1, c2, bbox_color, bbox_thick)
+        # background for object lables
+        t_size = cv2.getTextSize('HELMET', 0, fontScale, thickness=bbox_thick // 2)[0]
+        c3 = (c1[0] + (c2[0] - c1[0]) + 2, c1[1] - ((t_size[1]) + 2) * len(obj_detections[i]) - 1)
+        # cv2.rectangle(image, c1, (np.float32(c3[0]), np.float32(c3[1])), bbox_color, -1) #filled
 
-        if info:
-            print("Object found: {}, Confidence: {:.2f}, Helmet: {:.2f}".format(class_name, score, obj_detections[i][2][0]))
-
+        texts = []
+        
+        bbox_color = (0, 255, 0)
         if show_label:
             if obj_detections:
-                if obj_detections[i][2][0] >= obj_threshold:
-                    bbox_mess = obj_detections[i][3][0] + ' ' + str(int(obj_detections[i][2][0] * 100)) + '%'
-                else:
-                    probability = (100 - int(obj_detections[i][2][0] * 100))
-                    probability = probability + 50 if probability < 50 else probability
-                    bbox_mess = obj_detections[i][3][1] + ' ' + str(probability) + '%'
+                for j in range(len(obj_detections[i])):
+                    if obj_detections[i][j][2][0] >= obj_threshold:
+                        bbox_mess = obj_detections[i][j][3][0] + ' ' + str(int(obj_detections[i][j][2][0] * 100)) + '%'
+                    else:
+                        violation = True
+                        bbox_color = (255, 0, 0)
+
+                        probability = (100 - int(obj_detections[i][j][2][0] * 100))
+                        probability = probability + 50 if probability < 50 else probability
+                        bbox_mess = obj_detections[i][j][3][1] + ' ' + str(probability) + '%'
+
+                    texts.append([image, bbox_mess, (c1[0], np.float32(c1[1] - 17 * j)), cv2.FONT_HERSHEY_COMPLEX,
+                        fontScale, (0, 0, 0), bbox_thick // 2])
+                    # cv2.putText()
             else:
                 bbox_mess = '%s: %.2f' % (class_name, score)
 
-            t_size = cv2.getTextSize(bbox_mess, 0, fontScale, thickness=bbox_thick // 2)[0]
-            c3 = (c1[0] + t_size[0], c1[1] - t_size[1] - 3)
-            cv2.rectangle(image, c1, (np.float32(c3[0]), np.float32(c3[1])), bbox_color, -1) #filled
+                t_size = cv2.getTextSize(bbox_mess, 0, fontScale, thickness=bbox_thick // 2)[0]
+                c3 = (c1[0] + t_size[0], c1[1] - t_size[1] - 3)
+                cv2.rectangle(image, c1, (np.float32(c3[0]), np.float32(c3[1])), bbox_color, -1) #filled
 
-            cv2.putText(image, bbox_mess, (c1[0], np.float32(c1[1] - 2)), cv2.FONT_HERSHEY_COMPLEX,
+                cv2.putText(image, bbox_mess, (c1[0] - 50, np.float32(c1[1] - 2)), cv2.FONT_HERSHEY_COMPLEX,
                         fontScale, (0, 0, 0), bbox_thick // 2, lineType=cv2.LINE_AA)
 
-        if counted_classes != None:
-            height_ratio = int(image_h / 25)
-            offset = 15
-            for key, value in counted_classes.items():
-                cv2.putText(image, "{}s detected: {}".format(key, value), (5, offset),
-                        cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 2)
-                offset += height_ratio
+        cv2.rectangle(image, c1, c2, bbox_color, bbox_thick)
+        cv2.rectangle(image, c1, (np.float32(c3[0]), np.float32(c3[1])), bbox_color, -1) #filled
+        for text in texts:
+            cv2.putText(*text, lineType=cv2.LINE_AA)
+        
+        
+
     return [image, violation]
 
 def bbox_iou(bboxes1, bboxes2):

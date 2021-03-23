@@ -14,11 +14,17 @@
         "people_model": "/checkpoints/yolov4-416",
         "detecting_video": "/data/video/ShortHelmets.mp4",
         "detection_folder": "/detections",
-        "output": false,
+        "output": true,
         "output_path": "/detections/result.avi",
-        "last_frame": false,
+        "last_frame": true,
         "last_frame_name": "last_frame.jpeg",
+        "models": {
+            "helmet": "/checkpoints/yolov4-helmet"
+        },
         "helmet_model": "/checkpoints/yolov4-helmet",
-        "equipment_names": ["КАСКА", "НЕТ КАСКИ"]
+        "equipment_names": ["КАСКА", "НЕТ КАСКИ"],
+        "equipments_names": {
+            "helmet": ["КАСКА", "НЕТ КАСКИ"]
+        }
     }
 }

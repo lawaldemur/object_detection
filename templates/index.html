@@ -4,40 +4,159 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.9/cropper.min.css" />
     <style>
     	#image {
-    		width: 1280px;
-    		height: 720px;
+    		width: 1920px;
+    		height: 1080px;
+            position: absolute;
+            margin-top: 80px;
     	}
-    	#zone_btn {
+    	#zone_btn, #add_zone_btn, #clear_zone_btn, #zone_forbidden {
+            position: relative;
     		display: block;
     		width: 200px;
     		height: 40px;
     		margin-top: 20px;
+            margin-right: 20px;
     	}
+        .zone_selection {
+            position: absolute;
+            background-color: yellow;
+            opacity: 0.5;
+        }
+        .zone_forbidden_selection {
+            position: absolute;
+            background-color: red;
+            opacity: 0.5;
+        }
+        .cropper-drag-box {
+            display: none;
+        }
+        .buttons {
+            display: flex;
+        }
+        .cropper-view-box {
+            outline: 5px solid #39f;
+            outline-color: rgb(51,153,255);
+            opacity: 0.5;
+        }
+        .cropper-crop-box {
+            z-index: 999;
+        }
+
+        .models {
+            margin-top: 1150px;
+        }
     </style>
   </head>
   <body>
   	<div id="image">
-    	<img src="{{ stream_url }}" width="1280" height="720" id="show" class="{{ target }}">
+    	<img src="{{ stream_url }}" width="1920" height="1080" id="show" class="{{ target }}">
+
+        <!-- <div class="zone_selection" data-position=""></div> -->
     </div>
-    <button id="zone_btn" class="unclicked">Отметить зону</button>
+    <div class="buttons">
+        <button id="zone_btn" class="unclicked">Создать зону распознования</button>
+        <button id="add_zone_btn" class="unclicked">Добавить зону</button>
+        <button id="zone_forbidden" class="unclicked">Добавить запретную зону</button>
+        <button id="clear_zone_btn" class="unclicked">Очистить</button>
+    </div>
+    <div class="models">
+        <!-- <input type="checkbox" name="model" value="{{ detecting_equipment }}">
+        <label for="model">{{ detecting_equipment }}</label> -->
+    </div>
+    <button id="update_models">Изменить распозноваемые СИЗ</button>
 
 
     <!-- connect scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.9/cropper.min.js"></script>
     <script>
+        models_json = JSON.parse('{{ detecting_equipment }}'.replaceAll('&#34;', '"'));
+        active_models = [];
+
+        for (const [key, value] of Object.entries(models_json)) {
+            if (key == 'active') {
+                // console.log('active: ' + value);
+                active_models = value.split(" ");
+            }
+            else {
+                if (active_models.includes(key))
+                    $('.models').append('<div><input type="checkbox" id="' + key + '" checked><label for="' + key + '">' + key + '</label></div>');
+                else
+                    $('.models').append('<div><input type="checkbox" id="' + key + '"><label for="' + key + '">' + key + '</label></div>');
+            }
+            // console.log(key, value);
+        }
+
+        $('#update_models').on('click', function() {
+            // console.log('time to update detection models');
+            
+            var models_list = {'stream_id': stream_id.toString(), 'bodyguard': []};
+            $('.models input:checked').each(function(index, el) {
+                // console.log($(el).attr('id'));
+                models_list['bodyguard'].push($(el).attr('id'));
+            });
+            models_list['bodyguard'] = models_list['bodyguard'].join(' ');
+
+            $.getJSON($SCRIPT_ROOT + '/change_models',
+                models_list,
+                function() {
+                    console.log("success");
+            });
+
+            // console.log(models_list);
+        });
+
+
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
     	var cropper = false;
         var stream_id = {{ id }};
 
+        $('#add_zone_btn').on('click', function(event) {
+            var coords = cropper.getData(true)
+            $('#image').append('<div class="zone_selection" data-position="'
+                + coords.x  + ' '
+                + coords.y  + ' '
+                + coords.width  + ' '
+                + coords.height  + '"></div>');
+            $('#image .zone_selection').last().html('#' + ($('#image .zone_selection').length).toString() + ' zone');
+            $('#image .zone_selection').last().css({
+                top: coords.y + 'px',
+                left: coords.x + 'px',
+                width: coords.width + 'px',
+                height: coords.height + 'px'
+            });
+        });
+
+        $('#zone_forbidden').on('click', function(event) {
+            var coords = cropper.getData(true)
+            $('#image').append('<div class="zone_forbidden_selection" data-position="'
+                + -coords.x  + ' '
+                + -coords.y  + ' '
+                + -coords.width  + ' '
+                + -coords.height  + '"></div>')
+            $('#image .zone_forbidden_selection').last().css({
+                top: coords.y + 'px',
+                left: coords.x + 'px',
+                width: coords.width + 'px',
+                height: coords.height + 'px'
+            });
+        });
+
+        $('#clear_zone_btn').on('click', function(event) {
+            $('.zone_selection, .zone_forbidden_selection').remove();
+        });
+
 		$('#zone_btn').on('click', function(event) {
 			if ($(this).hasClass('unclicked'))
 			{
-				$(this).removeClass('unclicked').addClass('clicked')
-				$(this).text('Подтвердить')
+                $('#show').attr('src', '/preview/');
+                $('.zone_selection, .zone_forbidden_selection').remove();
 
-                if ($('#show').hasClass('stream'))
-                    $('#show').attr('src', '/photo/' + stream_id.toString());
+				$(this).removeClass('unclicked').addClass('clicked')
+				$(this).text('Сохранить')
+
+                // if ($('#show').hasClass('stream'))
+                    // $('#show').attr('src', '/photo/' + stream_id.toString());
 
 				cropper = new Cropper(document.getElementById('show'), {
 				  background: false,
@@ -46,8 +165,22 @@
 			else
 			{
 				$(this).removeClass('clicked').addClass('unclicked')
-				$(this).text('Отметить зону')
-                var coords = cropper.getData(true)
+				$(this).text('Создать зону распознования')
+
+                var x_coords = '';
+                var y_coords = '';
+                var width_coords = '';
+                var height_coords = '';
+
+                $('.zone_selection, .zone_forbidden_selection').each(function(index, el) {
+                    var coords = $(el).attr('data-position').split(' ');
+
+                    x_coords = x_coords + coords[0] + ' ';
+                    y_coords = y_coords + coords[1] + ' ';
+                    width_coords = width_coords + coords[2] + ' ';
+                    height_coords = height_coords + coords[3] + ' ';
+                });
+
 				cropper.destroy()
 
                 if ($('#show').hasClass('stream'))
@@ -55,24 +188,24 @@
 
                 $.getJSON($SCRIPT_ROOT + '/change_zone', {
                     stream_id: stream_id,
-                    x: coords.x,
-                    y: coords.y,
-                    width: coords.width,
-                    height: coords.height
+                    x: x_coords,
+                    y: y_coords,
+                    width: width_coords,
+                    height: height_coords
                 }, function() {
                     console.log("success");
                 });
                 
-                if ($('#show').hasClass('preview'))
-                    setTimeout(function() {
-                        location.reload();
-                    }, 500);
-                if ($('#show').hasClass('photo')) {
-                    // alert('Обновление зоны в потоке...');
-                    setTimeout(function() {
-                        location.reload();
-                    }, 2500);
-                }
+                // if ($('#show').hasClass('preview'))
+                //     setTimeout(function() {
+                //         location.reload();
+                //     }, 500);
+                // if ($('#show').hasClass('photo')) {
+                //     // alert('Обновление зоны в потоке...');
+                //     setTimeout(function() {
+                //         location.reload();
+                //     }, 2500);
+                // }
 			}
 		});
     </script>
