@@ -371,9 +371,3 @@ def detect_on_single_image(path='/detections/sample.jpeg'):
     image, violations = get_detected_zone(image)
     cv2.imwrite(os.getcwd() + path, image)
 
-
-detect_on_single_image('/detections/01.jpg')
-detect_on_single_image('/detections/02.jpg')
-detect_on_single_image('/detections/03.jpg')
-detect_on_single_image('/detections/04.jpg')
-detect_on_single_image('/detections/05.jpg')
