@@ -3,8 +3,9 @@ import json
 import os
 
 
-with open(os.getcwd() + '/config.json') as json_config:
-    config = json.load(json_config)['server']
+with open(os.getcwd() + '/config.json', "r", encoding='utf-8-sig') as json_config:
+    json_config = json_config.read()
+    config = json.loads(json_config)['server']
 
 
 def db_execute_query(query):

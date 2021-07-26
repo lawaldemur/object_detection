@@ -1,0 +1,44 @@
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": "5001",
+        "db": "db.sqlite",
+        "1cksu_auth": {
+            "url_offences": "https://intdb.1c-ksu.ru/PB_CORP_Demo_testirovanie/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws",
+            "url_areas": "https://copub.1c-ksu.ru/PB_CORP_Demo_testirovanie/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws",
+            "login": "WebServerVideo",
+            "password": "Videoanalitika2020"
+        }
+    },
+    "detection": {
+        "people_model": "/checkpoints/yolov4-416",
+        "detecting_video": "/data/video/ShortHelmets.mp4",
+        "detection_folder": "/detections",
+        "output": true,
+        "output_path": "/detections/result.avi",
+        "last_frame": true,
+        "last_frame_name": "last_frame.jpeg",
+        "models": {
+            "helmet": "/checkpoints/yolov4-helmet",
+            "mask": "/checkpoints/yolov4-mask",
+            "gloves": "/checkpoints/yolov4-gloves",
+            "boots": "/checkpoints/yolov4-boots",
+            "gasmask": "/checkpoints/yolov4-gasmask",
+            "goggles": "/checkpoints/yolov4-goggles",
+            "headphones": "/checkpoints/yolov4-headphones",
+            "harness": "/checkpoints/yolov4-harness"
+        },
+        "helmet_model": "/checkpoints/yolov4-helmet",
+        "equipment_names": ["КАСКА", "НЕТ КАСКИ"],
+        "equipments_names": {
+            "helmet": ["КАСКА", "НЕТ КАСКИ"],
+            "mask": ["МАСКА", "НЕТ МАСКИ"],
+            "gloves": ["ПЕРЧАТКИ", "НЕТ ПЕРЧАТОК"],
+            "boots": ["БОТИНКИ", "НЕТ БОТИНОК"],
+            "gasmask": ["ПРОТИВОГАЗ", "НЕТ ПРОТИВОГАЗА"],
+            "goggles": ["ОЧКИ", "НЕТ ОЧКОВ"],
+            "headphones": ["НАУШНИКИ", "НЕТ НАУШНИКОВ"],
+            "harness": ["РЕМНИ БЕЗОПАСНОТИ", "НЕТ РЕМНЕЙ БЕЗОПАСНОТИ"]
+        }
+    }
+}

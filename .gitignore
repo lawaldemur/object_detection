@@ -3,4 +3,5 @@ checkpoints/*
 detections/*
 data/previews/*
 data/video/*
+data/*.weights
 .idea/

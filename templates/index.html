@@ -149,7 +149,7 @@
 		$('#zone_btn').on('click', function(event) {
 			if ($(this).hasClass('unclicked'))
 			{
-                $('#show').attr('src', '/preview/');
+                $('#show').attr('src', '/preview_original/' + stream_id.toString());
                 $('.zone_selection, .zone_forbidden_selection').remove();
 
 				$(this).removeClass('unclicked').addClass('clicked')
@@ -182,6 +182,7 @@
                 });
 
 				cropper.destroy()
+                $('.zone_selection, .zone_forbidden_selection').remove();
 
                 if ($('#show').hasClass('stream'))
                     $('#show').attr('src', '/stream/' + stream_id.toString());
@@ -196,16 +197,10 @@
                     console.log("success");
                 });
                 
-                // if ($('#show').hasClass('preview'))
-                //     setTimeout(function() {
-                //         location.reload();
-                //     }, 500);
-                // if ($('#show').hasClass('photo')) {
-                //     // alert('Обновление зоны в потоке...');
-                //     setTimeout(function() {
-                //         location.reload();
-                //     }, 2500);
-                // }
+                if ($('#show').hasClass('preview'))
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
 			}
 		});
     </script>

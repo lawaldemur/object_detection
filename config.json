@@ -4,8 +4,8 @@
         "port": "5001",
         "db": "db.sqlite",
         "1cksu_auth": {
-            "url_offences": "https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws",
-            "url_areas": "https://copub.1c-ksu.ru/GPN_20/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws",
+            "url_offences": "https://intdb.1c-ksu.ru/PB_CORP_Demo_testirovanie/ws/ExchangeVideoserverOffences/ExchangeVideoserverOffences.1cws",
+            "url_areas": "https://copub.1c-ksu.ru/PB_CORP_Demo_testirovanie/ws/ExchangeVideoserverAreas/ExchangeVideoserverAreas.1cws",
             "login": "WebServerVideo",
             "password": "Videoanalitika2020"
         }

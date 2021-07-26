@@ -20,8 +20,10 @@ from db_connection import *
 from matplotlib import pyplot as plt
 
 
-with open(os.getcwd() + '/config.json') as json_config:
-    config = json.load(json_config)['detection']
+with open(os.getcwd() + '/config.json', "r", encoding='utf-8-sig') as json_config:
+    json_config = json_config.read()
+    config = json.loads(json_config)['detection']
+
 
 # main vars
 framework = 'tf'
@@ -42,8 +44,6 @@ show_fps = False
 outline = False
 violation_threshold = 0.5
 check_in_frames = (5 * 30) // (skip + 1)
-# last_boxes_period = ((60 // (skip + 1)) + 1)
-# last_boxes = []
 
 
 weights = os.getcwd() + config['people_model']
@@ -65,6 +65,9 @@ for key, value in config['models'].items():
     infers[key] = tf.saved_model.load(os.getcwd() + value, tags=[tag_constants.SERVING])
     # infers[key] = infers[key].signatures['serving_default']
 print('models loaded')
+
+coords_detections = []
+speed_detections = []
 
 
 def detect_on_person(original_image, bodyguard):
@@ -114,13 +117,21 @@ def check_not_empty_zone_coords(z):
     return not(len(z[0]) == 0)
 
 
-def highlight_zone(image, x, y, w, h, color=(102, 255, 255)):
+def highlight_zone(image, image_original, x, y, w, h, color=(102, 255, 255)):
     # First we crop the sub-rect from the image
-    sub_img = get_zone_of_image(image, x, y, w, h)
-    white_rect = np.full(sub_img.shape, color, dtype=np.uint8)
-    res = cv2.addWeighted(sub_img, 0.5, white_rect, 0.5, 1.0)
-    # Putting the image back to its position
-    image[y:y+h, x:x+w] = res
+    sub_img = get_zone_of_image(image_original, x, y, w, h)
+
+    if color == (0, 0, 195): # forbidden red zone
+        white_rect = np.full(sub_img.shape, color, dtype=np.uint8)
+        res = cv2.addWeighted(sub_img, 0.5, white_rect, 0.5, 1.0)
+        # Putting the image back to its position
+        image[y:y+h, x:x+w] = res
+
+    else: # regular yellow zone
+        # white_rect = np.full(image.shape, color, dtype=np.uint8)
+        # image = cv2.addWeighted(image, 0.5, white_rect, 0.5, 1.0)
+        # Putting the image back to its position
+        image[y:y+h, x:x+w] = sub_img
 
     return image
 
@@ -140,6 +151,7 @@ def get_detected_zone(result_frame, bodyguard=['helmet'], forbidden=False):
         boxes = value[:, :, 0:4]
         pred_conf = value[:, :, 4:]
 
+
     boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
         boxes=tf.reshape(boxes, (tf.shape(boxes)[0], -1, 1, 4)),
         scores=tf.reshape(
@@ -153,6 +165,24 @@ def get_detected_zone(result_frame, bodyguard=['helmet'], forbidden=False):
     # format bounding boxes from normalized ymin, xmin, ymax, xmax ---> xmin, ymin, xmax, ymax
     original_h, original_w, _ = result_frame.shape
     bboxes = utils.format_boxes(boxes.numpy()[0], original_h, original_w)
+
+    coords_detections.append([])
+    for i in range(len(bboxes)):
+        coords_detections[-1].append([bboxes[i][0], bboxes[i][1]])
+
+
+    if len(coords_detections) > 1:
+        speed_boxes = []
+        for i in range(len(bboxes)):
+            speed_boxes.append(((coords_detections[-2][i][0] - bboxes[i][0]) ** 2 + (coords_detections[-2][i][1] - bboxes[i][1]) ** 2) ** 0.5)
+
+        speed_detections.insert(0, speed_boxes)
+
+    if len(speed_detections) > 10:
+        for i in range(len(bboxes)):
+            if sum([speed_detections[x][i] for x in range(10)]) / 10 > 100:
+                print('SPEED LIMIT VIOLATION')
+
 
     # if we control emptiness of a room
     if forbidden:
@@ -173,7 +203,7 @@ def get_detected_zone(result_frame, bodyguard=['helmet'], forbidden=False):
     return image, violation
 
 
-def detection(id, endtime, check_emptiness=False):
+def detection(id, endtime, video_path, check_emptiness=False):
     print('Detection #', id, ' starts. Finish at ', endtime, sep='')
 
     config = ConfigProto()
@@ -181,7 +211,8 @@ def detection(id, endtime, check_emptiness=False):
     session = InteractiveSession(config=config)
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
     input_size = size
-    video_path = video
+    if not video_path:
+        video_path = video
     skip_frames = skip
     ended = False
     zone_coords = False
@@ -209,7 +240,7 @@ def detection(id, endtime, check_emptiness=False):
     while True:
         if time.time() >= endtime and endtime > 0:
             print('Detection #{} is stopped due to endtime'.format(id))
-            return
+            break
 
         for _ in range(skip_frames):
             vid.grab()
@@ -274,12 +305,17 @@ def detection(id, endtime, check_emptiness=False):
             
             result = np.asarray(image)
             result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+            # clear image without highlighted zones
+            result_original = np.asarray(image)
+            result_original = cv2.cvtColor(result_original, cv2.COLOR_BGR2RGB)
 
         
             if check_not_empty_zone_coords(zone_coords):
+                white_rect = np.full(result.shape, (102, 255, 255), dtype=np.uint8)
+                result = cv2.addWeighted(result, 0.5, white_rect, 0.5, 1.0)
                 # highlight zones
                 for i in range(len(zone_coords[0])):
-                    result = highlight_zone(result, zone_coords[0][i], zone_coords[1][i], zone_coords[2][i], zone_coords[3][i])
+                    result = highlight_zone(result, result_original, zone_coords[0][i], zone_coords[1][i], zone_coords[2][i], zone_coords[3][i])
                 # end for each zone
             if check_not_empty_zone_coords(forbidden_coords):
                 # highlight zones
@@ -293,7 +329,7 @@ def detection(id, endtime, check_emptiness=False):
                             (forbidden_coords[1][i] < j[3] and j[3] < (forbidden_coords[1][i] + forbidden_coords[3][i])):
                             print('MAN IN RED ZONE!!!')
 
-                    result = highlight_zone(result, forbidden_coords[0][i], forbidden_coords[1][i], forbidden_coords[2][i], forbidden_coords[3][i], (0, 0, 195))
+                    result = highlight_zone(result, result_original, forbidden_coords[0][i], forbidden_coords[1][i], forbidden_coords[2][i], forbidden_coords[3][i], (0, 0, 195))
 
             # violaton sending
             while len(violations) > check_in_frames:
@@ -331,6 +367,11 @@ def detection(id, endtime, check_emptiness=False):
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+    # remove downloaded external videofile in order to save space on server
+    if str(id) + '.mp4' in video_path:
+        os.remove(video_path)
+
 
 
 def is_empty(result_frame):
